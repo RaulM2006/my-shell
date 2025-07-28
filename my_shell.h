@@ -21,6 +21,10 @@ void run_command(char**, char*, vector*);
 
 // method for running history
 void history(vector*);
+
+// method for freeing memory allocated for arguments
+void free_args(char**);
+
 // TODO 
 // command history
 // env variable support

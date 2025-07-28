@@ -19,17 +19,14 @@ void run_shell() {
             free(input);
             break;
         }
-        
-        
-        
+         
         run_command(myargs, original_input, hst);
 
         free(input);
         //free(original_input);
-        free(myargs);
-        input = NULL;
+        free_args(myargs);
     }
-    destroy_vector(hst);
+    //destroy_vector(hst);
     exit(0);
 }
 
@@ -47,31 +44,51 @@ void tokenize(char*** myargs, char* input) {
     char* p = strtok(input, " ");
     int cnt = 0;
     while (p != NULL) {
-        (*myargs)[cnt++] = p;
+        (*myargs)[cnt++] = strdup(p);
         p = strtok(NULL, " ");
     }
     (*myargs)[cnt] = NULL;
 }
 
 void run_command(char** myargs, char* original_input, vector* h) {
-    int status;
-        
+    if (myargs == NULL) return;
+
+    // Handle built-ins before execvp
+    if (strcmp(myargs[0], "history") == 0) {
+        history(h);
+        return;
+    }
+
+    if (myargs[0][0] == '!') {
+        char* args_copy = strdup(myargs[0] + 1);
+        int index = atoi(args_copy) - 1;
+        free(args_copy);
+
+        char* cmd = element(h, index);
+        if (!cmd) {
+            printf("No command available at %d\n", index + 1);
+            return;
+        }
+
+        char** recalled_args = NULL;
+        tokenize(&recalled_args, cmd);
+        run_command(recalled_args, cmd, h);
+        //free(cmd);
+        free_args(recalled_args);
+        return;
+    }
+
+    // Run external command
+    int status;    
     int pid = fork();
     if (pid == 0) {
         execvp(myargs[0], myargs);
+    
+        printf("%s: invalid command\n", original_input);
         exit(1);
     }
     else {
         wait(&status);
-        if (WIFEXITED(status)) {
-            if (WEXITSTATUS(status) == 1) {
-                if (strcmp(myargs[0], "history") == 0) {
-                    history(h);
-                } else {
-                    printf("%s: invalid command\n", original_input);
-                }
-            }
-        }
     }
 }
 
@@ -79,4 +96,14 @@ void history(vector* hist) {
     for (int i = 0; i < hist->size; ++i) {
         printf("\t%d\t %s\n", i + 1, (char*)element(hist, i));
     }
+}
+
+void free_args(char** args) {
+    if (args == NULL) return;
+    for (int i = 0; args[i] != NULL; ++i) {
+        if (args[i] != NULL) {
+            free(args[i]);
+        }
+    }
+    free(args);
 }

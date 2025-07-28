@@ -12,7 +12,9 @@ vector* create_vector() {
 
 void destroy_vector(vector* v) {
     for (int i = 0; i < v->size; ++i) {
-        free(v->elems[i]);
+        if (v->elems[i] != NULL) {
+            free(v->elems[i]);
+        }
     }
     free(v->elems);
     free(v);
