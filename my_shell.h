@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "dynamic_list.h"
 
 void run_shell();
 
@@ -15,9 +16,12 @@ void read_input(char**);
 // method for separating the command given by user
 void tokenize(char***, char*);
 
+// method for running the command
+void run_command(char**, char*, vector*);
+
+// method for running history
+void history(vector*);
 // TODO 
-// refactor run_shell() code
-// input validation handling
 // command history
 // env variable support
 // support for background processes

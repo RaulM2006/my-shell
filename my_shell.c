@@ -1,33 +1,35 @@
 #include "my_shell.h"
+#include "dynamic_list.h"
 
 void run_shell() {
+    vector* hst = create_vector();
     while (1) {
         char* input = NULL;
         read_input(&input);
         input[strlen(input) - 1] = '\0';
+        
+        char* original_input = strdup(input);
+        
+        push_back(hst, (char*)original_input);
+        char** myargs = NULL;
+        tokenize(&myargs, input);
+        
         if (strcmp(input, "exit") == 0) {
             printf("Bye bye!\n");
             free(input);
             break;
         }
+        
+        
+        
+        run_command(myargs, original_input, hst);
 
-        char* original_input = strdup(input);
-        
-        char** myargs = NULL;
-        tokenize(&myargs, input);
-        
-        int status;
-        if (fork() == 0) {
-            execvp(myargs[0], myargs);
-            printf("%s: invalid command\n", original_input);
-            exit(1);
-        }
-        wait(&status);
         free(input);
-        free(original_input);
+        //free(original_input);
         free(myargs);
         input = NULL;
     }
+    destroy_vector(hst);
     exit(0);
 }
 
@@ -49,4 +51,32 @@ void tokenize(char*** myargs, char* input) {
         p = strtok(NULL, " ");
     }
     (*myargs)[cnt] = NULL;
+}
+
+void run_command(char** myargs, char* original_input, vector* h) {
+    int status;
+        
+    int pid = fork();
+    if (pid == 0) {
+        execvp(myargs[0], myargs);
+        exit(1);
+    }
+    else {
+        wait(&status);
+        if (WIFEXITED(status)) {
+            if (WEXITSTATUS(status) == 1) {
+                if (strcmp(myargs[0], "history") == 0) {
+                    history(h);
+                } else {
+                    printf("%s: invalid command\n", original_input);
+                }
+            }
+        }
+    }
+}
+
+void history(vector* hist) {
+    for (int i = 0; i < hist->size; ++i) {
+        printf("\t%d\t %s\n", i + 1, (char*)element(hist, i));
+    }
 }
