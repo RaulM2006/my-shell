@@ -12,19 +12,21 @@ void run_shell() {
         
         char* original_input = strdup(input);
         
-        push_back(hst, (char*)original_input);
+        //push_back(hst, (char*)original_input);
         tokenize(&myargs, input);
         
         if (strcmp(input, "exit") == 0) {
             printf("Bye bye!\n");
             free(input);
+            free(original_input);
             free(myargs);
             break;
         }
          
-        run_command(myargs, original_input, hst);
+        run_command(myargs, original_input, hst, 1);
 
         free(input);
+        free(original_input);
     }
     destroy_vector(hst);
     exit(0);
@@ -49,16 +51,17 @@ void tokenize(char*** myargs, char* input) {
     (*myargs)[cnt] = NULL;
 }
 
-void run_command(char** myargs, char* original_input, vector* h) {
+void run_command(char** myargs, char* original_input, vector* h, int to_save) {
     if (myargs == NULL) return;
 
     // Handle built-ins before execvp
     if (strcmp(myargs[0], "history") == 0) {
+        push_back(h, strdup("history"));
         history(h);
         return;
     }
 
-    if (myargs[0][0] == '!') {
+    if (myargs[0][0] == '!' && isdigit(myargs[0][1])) {
         char* args_copy = strdup(myargs[0] + 1);
         int index = atoi(args_copy) - 1;
         free(args_copy);
@@ -69,13 +72,24 @@ void run_command(char** myargs, char* original_input, vector* h) {
             return;
         }
 
+        char* expanded = strdup(cmd);
+
         char** recalled_args = (char**)malloc(sizeof(char*) * 1024);
-        tokenize(&recalled_args, cmd);
-        run_command(recalled_args, cmd, h);
+        tokenize(&recalled_args, expanded);
+        
+        if (to_save) {
+            push_back(h, strdup(expanded));
+        }
+        run_command(recalled_args, expanded, h, 0); 
+
+        free(expanded);
         free(recalled_args);
         return;
     }
-
+    
+    if (to_save) {
+        push_back(h, strdup(original_input));
+    }
     // Run external command
     int status;    
     int pid = fork();

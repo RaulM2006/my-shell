@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "dynamic_list.h"
+#include <ctype.h>
 
 void run_shell();
 
@@ -17,7 +18,7 @@ void read_input(char**);
 void tokenize(char***, char*);
 
 // method for running the command
-void run_command(char**, char*, vector*);
+void run_command(char**, char*, vector*, int);
 
 // method for running history
 void history(vector*);
