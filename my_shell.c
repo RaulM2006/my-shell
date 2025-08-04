@@ -3,6 +3,8 @@
 
 void run_shell() {
     vector* hst = create_vector();
+    char** myargs = (char**)malloc(sizeof(char*) * 1024);
+    
     while (1) {
         char* input = NULL;
         read_input(&input);
@@ -11,22 +13,20 @@ void run_shell() {
         char* original_input = strdup(input);
         
         push_back(hst, (char*)original_input);
-        char** myargs = NULL;
         tokenize(&myargs, input);
         
         if (strcmp(input, "exit") == 0) {
             printf("Bye bye!\n");
             free(input);
+            free(myargs);
             break;
         }
          
         run_command(myargs, original_input, hst);
 
         free(input);
-        //free(original_input);
-        free_args(myargs);
     }
-    //destroy_vector(hst);
+    destroy_vector(hst);
     exit(0);
 }
 
@@ -40,11 +40,10 @@ void read_input(char** input) {
 }
 
 void tokenize(char*** myargs, char* input) {
-    (*myargs) = (char**)malloc(sizeof(char*) * (strlen(input) / 2 + 2));
     char* p = strtok(input, " ");
     int cnt = 0;
     while (p != NULL) {
-        (*myargs)[cnt++] = strdup(p);
+        (*myargs)[cnt++] = p;
         p = strtok(NULL, " ");
     }
     (*myargs)[cnt] = NULL;
@@ -70,11 +69,10 @@ void run_command(char** myargs, char* original_input, vector* h) {
             return;
         }
 
-        char** recalled_args = NULL;
+        char** recalled_args = (char**)malloc(sizeof(char*) * 1024);
         tokenize(&recalled_args, cmd);
         run_command(recalled_args, cmd, h);
-        //free(cmd);
-        free_args(recalled_args);
+        free(recalled_args);
         return;
     }
 
@@ -96,14 +94,4 @@ void history(vector* hist) {
     for (int i = 0; i < hist->size; ++i) {
         printf("\t%d\t %s\n", i + 1, (char*)element(hist, i));
     }
-}
-
-void free_args(char** args) {
-    if (args == NULL) return;
-    for (int i = 0; args[i] != NULL; ++i) {
-        if (args[i] != NULL) {
-            free(args[i]);
-        }
-    }
-    free(args);
 }
