@@ -2,13 +2,13 @@
 CC = gcc
 
 # Compiler flags (warnings + debug info)
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -Iinclude
 
 # Executable name
 TARGET = mysh
 
 # Source files
-SRCS = dynamic_list.c main.c my_shell.c
+SRCS = main.c $(wildcard src/*.c)
 
 # Object files
 OBJS = $(SRCS:.c=.o)
@@ -29,3 +29,4 @@ clean:
 	rm -f $(OBJS) $(TARGET)
 
 .PHONY: all clean
+
