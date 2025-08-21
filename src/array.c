@@ -1,26 +1,27 @@
-#include "dynamic_list.h"
+#include "array.h"
 
-vector* create_vector() {
-    vector* v = malloc(sizeof(vector));
+array_t* create_array_t(DestroyF destroyElements) {
+    array_t* v = malloc(sizeof(array_t));
 
     v->cap = 1;
     v->size = 0;
     v->elems = malloc(v->cap * sizeof(TElem));
+    v->destroyElement = destroyElements;
 
     return v;
 }
 
-void destroy_vector(vector* v) {
+void destroy_array_t(array_t* v) {
     for (int i = 0; i < v->size; ++i) {
         if (v->elems[i] != NULL) {
-            free(v->elems[i]);
+            v->destroyElement(v->elems[i]);
         }
     }
     free(v->elems);
     free(v);
 }
 
-void resize(vector* v) {
+void resize(array_t* v) {
     int new_cap = v->cap * 2;
     TElem* aux = malloc(new_cap * sizeof(TElem));
 
@@ -32,7 +33,7 @@ void resize(vector* v) {
     v->cap = new_cap;
 }
 
-void push_back(vector* v, TElem e) {
+void add(array_t* v, TElem e) {
     if (v->size == v->cap) {
         resize(v);
     }
@@ -40,21 +41,20 @@ void push_back(vector* v, TElem e) {
     (v->size)++;
 }
 
-void pop_back(vector* v) {
-    if (v->size > 0) {
-        free(v->elems[v->size - 1]);
-        (v->size)--;
-    }
+void update(array_t* v, TElem* e, int position) {
+    v->destroyElement(v->elems[position]);
+    v->elems[position] = e;
 }
 
-TElem element(vector* v, int index) {
-    if (index < 0 || index >= v->size) {
-        return NULL;
+void del(array_t* v, int position) {
+    v->destroyElement(v->elems[position]);
+    for (int i = position; i < v->size - 1; ++i) {
+        v->elems[i] = v->elems[i + 1];
     }
-    return v->elems[index];
+    (v->size)--;
 }
 
-int empty(vector* v) {
+int empty(array_t* v) {
     if (v->size == 0) {
         return 1;
     }

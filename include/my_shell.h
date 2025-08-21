@@ -6,8 +6,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include "dynamic_list.h"
 #include <ctype.h>
+
+#include "array.h"
 
 /**
  * Main shell loop: reads input, tokenizes, handles history, and executes commands.
@@ -29,23 +30,23 @@ void read_input(char** input);
  *             The array must be pre-allocated with enough space.
  * @param input The input string to tokenize. This string is modified by strtok.
  */
-void tokenize(char*** args, char* input);
+void tokenize(char*** args, char* input, array_t* env);
 
 /**
  * Executes a command based on the tokenized arguments.
  * Handles built-in commands, history expansion, and runs external programs.
  * @param args Tokenized command arguments.
  * @param original_input The original input string before tokenization.
- * @param history Pointer to the vector storing command history.
+ * @param history Pointer to the array_t storing command history.
  * @param to_save Flag indicating whether to save this command in history (1 = yes, 0 = no).
  */
-void run_command(char** args, char* original_input, vector* history, int to_save);
+void run_command(char** args, char* original_input, array_t* history, array_t* env, int to_save);
 
 /**
- * Prints the command history stored in the vector.
- * @param hist Pointer to the vector holding history strings.
+ * Prints the command history stored in the array_t.
+ * @param hist Pointer to the array_t holding history strings.
  */
-void history(vector* hist);
+void history(array_t* hist);
 
 /**
  * Frees memory allocated for the array of argument strings.
@@ -62,20 +63,20 @@ int is_history_expansion(char* cmd);
 
 /**
  * Expands a history command (e.g. "!3") to the actual command string from history.
- * @param history Pointer to the vector holding history commands.
+ * @param history Pointer to the array_t holding history commands.
  * @param cmd The history expansion string (e.g. "!3").
  * @return Newly allocated string with the expanded command, or NULL if not found.
  *         Caller is responsible for freeing the returned string.
  */
-char* expand_history_command(vector* history, char* cmd);
+char* expand_history_command(array_t* history, char* cmd);
 
 /**
  * Handles built-in commands like "history".
  * @param args Tokenized arguments.
- * @param history Pointer to the command history vector.
+ * @param history Pointer to the command history array_t.
  * @return 1 if the command was a built-in and handled, 0 otherwise.
  */
-int handle_builtin(char** args, vector* h);
+int handle_builtin(char** args, array_t* h);
 
 /**
  * Executes an external command by forking and calling execvp.
@@ -83,6 +84,12 @@ int handle_builtin(char** args, vector* h);
  * @param original_input The original input string (used for error messages).
  */
 void execute_external(char** args, char* original_input);
+
+void init_shell_env(array_t* arr);
+
+int has_variable_expansion(char** args);
+
+void expand_args(char*** expanded_args, char** args);
 
 // TODO 
 // env variable support
