@@ -11,88 +11,141 @@
 #include "array.h"
 
 /**
- * Main shell loop: reads input, tokenizes, handles history, and executes commands.
- * Continues until the user types "exit".
- * Allocates and frees necessary memory internally.
+ * Main shell loop.
+ * Reads user input, tokenizes, handles history and environment, and executes commands.
+ * Terminates when the user types "exit".
+ * Allocates and frees memory internally.
  */
 void run_shell();
 
 /**
- * Reads a line of input from the user.
- * @param input Pointer to a char* that will be allocated and set to the input string.
+ * Reads a line of input from stdin.
+ * @param input Pointer to a char* that will be set to a newly allocated string.
  *              The caller is responsible for freeing the allocated memory.
  */
 void read_input(char** input);
 
 /**
- * Tokenizes the input string by spaces into an array of argument strings.
+ * Splits the input string into tokens separated by whitespace.
  * @param args Pointer to a char** array where tokens will be stored.
- *             The array must be pre-allocated with enough space.
- * @param input The input string to tokenize. This string is modified by strtok.
+ *             Must be pre-allocated with enough space for tokens.
+ * @param input The input string to tokenize. Modified in place by strtok.
  */
-void tokenize(char*** args, char* input, array_t* env);
+void tokenize(char*** args, char* input);
 
 /**
- * Executes a command based on the tokenized arguments.
- * Handles built-in commands, history expansion, and runs external programs.
- * @param args Tokenized command arguments.
- * @param original_input The original input string before tokenization.
- * @param history Pointer to the array_t storing command history.
- * @param to_save Flag indicating whether to save this command in history (1 = yes, 0 = no).
+ * Executes a command (builtin or external).
+ * @param args Null-terminated array of tokenized arguments.
+ * @param original_input The raw input string (used for error messages and history).
+ * @param history Pointer to the command history array.
+ * @param env Pointer to the environment variables array.
+ * @param to_save 1 to save command in history, 0 otherwise.
  */
 void run_command(char** args, char* original_input, array_t* history, array_t* env, int to_save);
 
 /**
- * Prints the command history stored in the array_t.
- * @param hist Pointer to the array_t holding history strings.
+ * Prints the command history.
+ * @param hist Pointer to the history array.
  */
 void history(array_t* hist);
 
 /**
- * Frees memory allocated for the array of argument strings.
- * @param args Null-terminated array of argument strings to free.
+ * Frees memory allocated for tokenized arguments.
+ * @param args Null-terminated array of argument strings.
  */
 void free_args(char** args);
 
 /**
- * Checks if a command string is a history expansion (starts with '!').
- * @param cmd Command string to check.
- * @return 1 if it is a history expansion, 0 otherwise.
+ * Checks whether a command is a history expansion.
+ * @param cmd The command string.
+ * @return 1 if the command starts with '!', 0 otherwise.
  */
 int is_history_expansion(char* cmd);
 
 /**
- * Expands a history command (e.g. "!3") to the actual command string from history.
- * @param history Pointer to the array_t holding history commands.
- * @param cmd The history expansion string (e.g. "!3").
- * @return Newly allocated string with the expanded command, or NULL if not found.
+ * Expands a history reference (e.g. "!3") to the actual command.
+ * @param history Pointer to the history array.
+ * @param cmd The history reference string.
+ * @return Newly allocated expanded command, or NULL if not found.
  *         Caller is responsible for freeing the returned string.
  */
 char* expand_history_command(array_t* history, char* cmd);
 
 /**
- * Handles built-in commands like "history".
+ * Handles built-in commands (set, unset, export, history, etc.).
  * @param args Tokenized arguments.
- * @param history Pointer to the command history array_t.
- * @return 1 if the command was a built-in and handled, 0 otherwise.
+ * @param h Pointer to the history array.
+ * @param env Pointer to the environment array.
+ * @param original_input The raw input string.
+ * @return 1 if the command was handled as a builtin, 0 otherwise.
  */
-int handle_builtin(char** args, array_t* h);
+int handle_builtin(char** args, array_t* h, array_t* env, char* original_input);
 
 /**
- * Executes an external command by forking and calling execvp.
- * @param args Tokenized arguments for the external command.
- * @param original_input The original input string (used for error messages).
+ * Executes an external command by forking and calling execve.
+ * @param args Null-terminated argument vector.
+ * @param env Pointer to the environment array.
  */
-void execute_external(char** args, char* original_input);
+void execute_external(char** args, array_t* env);
 
+/**
+ * Initializes the shell environment from the inherited environ[].
+ * @param arr Pointer to the environment array to populate.
+ */
 void init_shell_env(array_t* arr);
 
-int has_variable_expansion(char** args);
+/**
+ * Expands tokens such as environment variables ($VAR).
+ * @param myargs Pointer to the tokenized argument array.
+ * @param env Pointer to the environment array.
+ */
+void expand_tokens(char*** myargs, array_t* env);
 
-void expand_args(char*** expanded_args, char** args);
+/**
+ * Sets or updates a shell variable.
+ * @param args Tokenized arguments of the form VAR=VALUE.
+ * @param env Pointer to the environment array.
+ */
+void set(char** args, array_t* env);
+
+/**
+ * Removes a variable from the shell environment.
+ * @param args Tokenized arguments (variable names).
+ * @param env Pointer to the environment array.
+ */
+void unset(char** args, array_t* env);
+
+/**
+ * Marks variables for export so they are passed to child processes.
+ * @param args Tokenized arguments (variable names).
+ * @param env Pointer to the environment array.
+ */
+void export(char** args, array_t* env);
+
+/**
+ * Prints all environment variables stored in the shell.
+ * @param env Pointer to the environment array.
+ */
+void print_env(array_t* env);
+
+/**
+ * Builds an envp[] array suitable for passing to execve.
+ * @param env Pointer to the environment array.
+ * @return Newly allocated NULL-terminated envp array.
+ *         Caller is responsible for freeing it.
+ */
+char** build_envp(array_t* env);
+
+/**
+ * Searches for a command in the PATH.
+ * @param cmd The command name.
+ * @param env Pointer to the environment array.
+ * @return Newly allocated string with the full path, or NULL if not found.
+ *         Caller is responsible for freeing the returned string.
+ */
+char* find_in_path(char* cmd, array_t* env);
 
 // TODO 
-// env variable support
 // support for background processes
 // I/O redirection
 // implement pipes
@@ -103,5 +156,5 @@ void expand_args(char*** expanded_args, char** args);
 // custom shell variables
 // config file
 
-
 #endif
+

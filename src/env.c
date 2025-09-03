@@ -67,3 +67,13 @@ void unset_var(char* name, array_t* arr) {
     }
 }
 
+int count_exported(array_t* arr) {
+    int count = 0;
+    for (int i = 0; i < arr->size; ++i) {
+        env_var_t* ev = arr->elems[i];
+        if (ev->exported) {
+            count++;
+        }
+    }
+    return count;
+}
