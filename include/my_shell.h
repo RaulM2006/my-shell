@@ -122,6 +122,8 @@ void unset(char** args, array_t* env);
  */
 void export(char** args, array_t* env);
 
+void cd(char** args, array_t* env);
+
 /**
  * Prints all environment variables stored in the shell.
  * @param env Pointer to the environment array.

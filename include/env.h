@@ -5,6 +5,7 @@
 
 #include <unistd.h>
 #include <string.h>
+#include <linux/limits.h>
 
 /**
  * Structure representing a shell environment variable.

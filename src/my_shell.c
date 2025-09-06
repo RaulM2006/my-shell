@@ -151,16 +151,25 @@ int handle_builtin(char** args, array_t* h, array_t* env, char* original_input) 
         return 1; // handled
     }
 
+    // export command
     if (strcmp(args[0], "export") == 0) {
         add(h, strdup(original_input));
         export(args, env);
         return 1; // handled
     }
 
+    // env command
     if (strcmp(args[0], "env") == 0) {
         add(h, strdup(original_input));
         print_env(env);
-        return 1;
+        return 1; // handled
+    }
+
+    // cd command
+    if (strcmp(args[0], "cd") == 0) {
+        add(h, strdup(original_input));
+        cd(args, env);
+        return 1; // handled
     }
     return 0; // not handled
 }
@@ -294,7 +303,7 @@ void unset(char** args, array_t* env) {
         unset_var(name, env);
     }
 }
-
+        
 void export(char** args, array_t* env) {
     if (args[1] == NULL) {
         printf("export: not enough arguments\n");
@@ -314,6 +323,39 @@ void export(char** args, array_t* env) {
         
         export_var(name, env);
     }
+}
+
+void cd(char** args, array_t* env) {
+    char* target;
+    if (args[1] == NULL) {
+        target = get_var("HOME", env);
+    } else if (strcmp(args[1], "-") == 0) {
+            target = get_var("OLDPWD", env);
+        } else {
+                target = args[1];    
+            }
+
+    printf("target is %s\n", target);
+    if (target == NULL) {
+        perror("cd: target not set\n");
+        return;
+    }
+
+    char* oldpwd = get_var("PWD", env);
+
+    if (chdir(target) == -1) {
+        perror("cd");
+        return;
+    }
+
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        perror("getcwd");
+        return;
+    }
+    if (oldpwd)
+        set_var("OLDPWD", oldpwd, env);
+    set_var("PWD", cwd, env);
 }
 
 void print_env(array_t* env) {
