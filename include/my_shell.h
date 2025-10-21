@@ -122,6 +122,11 @@ void unset(char** args, array_t* env);
  */
 void export(char** args, array_t* env);
 
+/**
+ * Changes current directory 
+ * @param args Tokenized arguments (target directory)
+ * @param env Pointer to the environment array
+ */
 void cd(char** args, array_t* env);
 
 /**
@@ -146,6 +151,12 @@ char** build_envp(array_t* env);
  *         Caller is responsible for freeing the returned string.
  */
 char* find_in_path(char* cmd, array_t* env);
+
+/**
+ * Handles SIGCHLD signal
+ * @param sig signal value
+ */
+void sigchild_handler(int sig);
 
 // TODO 
 // support for background processes

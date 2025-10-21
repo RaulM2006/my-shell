@@ -6,11 +6,18 @@
 
 extern char** environ;
 
+void sigchild_handler(int sig) {
+    int status;
+    while (waitpid(-1, &status, WNOHANG) > 0);
+}
+
 void run_shell() {
     array_t* hst = create_array_t(free);
     char** myargs = (char**)malloc(sizeof(char*) * MAX_SIZE);
     array_t* env = create_array_t((DestroyF)destroy_env_var);
     init_shell_env(env);
+
+    signal(SIGCHLD, sigchild_handler);
 
     while (1) {
         char* input = NULL;
@@ -46,6 +53,7 @@ void run_shell() {
 
 void read_input(char** input) {
     printf(">> ");
+    fflush(stdout);
     size_t buf_size = MAX_SIZE;
 
     if (getline(input, &buf_size, stdin) == -1) {
@@ -181,9 +189,22 @@ void execute_external(char** args, array_t* env) {
         return;
     }
     
+    int background = 0;
+    int i = 0;
+    char* current;
+    while (args[i] != NULL) {
+        current = strdup(args[i]);
+        if (current && strcmp(current, "&") == 0) {
+            background = 1;
+            args[i] = NULL;
+            break;
+        }
+        i++;
+    }
+
     // build envp
     char** envp = build_envp(env);
-
+    
     int status;
     int pid = fork();
 
@@ -193,7 +214,8 @@ void execute_external(char** args, array_t* env) {
         perror("execve");
         exit(1);
     } else {
-        wait(&status);
+        if (!background) 
+            waitpid(pid, &status, 0);
     }
     free(path);
     for (int i = 0; envp[i] != NULL; ++i) {
@@ -372,7 +394,7 @@ char** build_envp(array_t* env) {
 
     char** envp = malloc((n + 1) * sizeof(char*));
     if (!envp) return NULL;
-
+    
     int j = 0;
     for (int i = 0; i < env->size; ++i) {
         env_var_t* var = env->elems[i];
