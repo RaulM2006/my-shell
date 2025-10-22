@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #include "array.h"
 
@@ -158,9 +159,9 @@ char* find_in_path(char* cmd, array_t* env);
  */
 void sigchild_handler(int sig);
 
+void handle_redirection(char** args);
+
 // TODO 
-// support for background processes
-// I/O redirection
 // implement pipes
 // handle signals
 // support scripting

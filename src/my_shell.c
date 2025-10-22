@@ -188,7 +188,8 @@ void execute_external(char** args, array_t* env) {
         fprintf(stderr, "%s: command not found\n", args[0]);
         return;
     }
-    
+   
+    // if '&' is present for bg processes
     int background = 0;
     int i = 0;
     char* current;
@@ -210,6 +211,7 @@ void execute_external(char** args, array_t* env) {
 
     if (pid == 0) {
         // child
+        handle_redirection(args);
         execve(path, args, envp);
         perror("execve");
         exit(1);
@@ -438,3 +440,67 @@ char* find_in_path(char* cmd, array_t* env) {
     return NULL;
 }
 
+void handle_redirection(char **args) {
+    for (int i = 0; args[i]; i++) {
+
+        // ----- FD to FD redirection: n>&m -----
+        if (strstr(args[i], ">&")) {
+            int src = args[i][0] - '0';
+            int dst = args[i][3] - '0';
+            if (dup2(dst, src) < 0) {
+                perror("dup2");
+                exit(1);
+            }
+            args[i] = NULL;
+        }
+
+        // ----- Numbered FD redirection: n>file or n>>file -----
+        else if ((args[i][1] == '>' && args[i][0] >= '0' && args[i][0] <= '9') ||
+                 (args[i][2] == '>' && args[i][1] == '>' && args[i][0] >= '0' && args[i][0] <= '9')) {
+            int n = args[i][0] - '0';
+            int append = (args[i][2] == '>');
+            int fd = open(args[i + 1], O_WRONLY | O_CREAT | (append ? O_APPEND : O_TRUNC), 0644);
+            if (fd < 0) {
+                perror("open");
+                exit(1);
+            }
+            if (dup2(fd, n) < 0) {
+                perror("dup2");
+                exit(1);
+            }
+            close(fd);
+            args[i] = NULL;
+        }
+
+        // ----- Input redirection < -----
+        else if (strcmp(args[i], "<") == 0) {
+            int fd = open(args[i + 1], O_RDONLY);
+            if (fd < 0) {
+                perror("open");
+                exit(1);
+            }
+            if (dup2(fd, STDIN_FILENO) < 0) {
+                perror("dup2");
+                exit(1);
+            }
+            close(fd);
+            args[i] = NULL;
+        }
+
+        // ----- Output redirection > or >> (no number) -----
+        else if (strcmp(args[i], ">") == 0 || strcmp(args[i], ">>") == 0) {
+            int append = (strcmp(args[i], ">>") == 0);
+            int fd = open(args[i + 1], O_WRONLY | O_CREAT | (append ? O_APPEND : O_TRUNC), 0644);
+            if (fd < 0) {
+                perror("open");
+                exit(1);
+            }
+            if (dup2(fd, STDOUT_FILENO) < 0) {
+                perror("dup2");
+                exit(1);
+            }
+            close(fd);
+            args[i] = NULL;
+        }
+    }
+}
