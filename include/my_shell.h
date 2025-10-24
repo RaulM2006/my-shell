@@ -162,7 +162,6 @@ void sigchild_handler(int sig);
 void handle_redirection(char** args);
 
 // TODO 
-// implement pipes
 // handle signals
 // support scripting
 // tab completion

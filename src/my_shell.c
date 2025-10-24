@@ -183,47 +183,92 @@ int handle_builtin(char** args, array_t* h, array_t* env, char* original_input) 
 }
 
 void execute_external(char** args, array_t* env) {
-    char* path = find_in_path(args[0], env);
-    if (!path) {
-        fprintf(stderr, "%s: command not found\n", args[0]);
-        return;
-    }
-   
-    // if '&' is present for bg processes
+    if (!args || !args[0]) return;
+
+    // Check for background execution &
     int background = 0;
-    int i = 0;
-    char* current;
-    while (args[i] != NULL) {
-        current = strdup(args[i]);
-        if (current && strcmp(current, "&") == 0) {
+    for (int i = 0; args[i]; i++) {
+        if (strcmp(args[i], "&") == 0) {
             background = 1;
             args[i] = NULL;
             break;
         }
-        i++;
     }
 
-    // build envp
-    char** envp = build_envp(env);
-    
-    int status;
-    int pid = fork();
+    // Check for pipes
+    int has_pipe = 0;
+    for (int i = 0; args[i]; i++)
+        if (strcmp(args[i], "|") == 0) { has_pipe = 1; break; }
 
-    if (pid == 0) {
-        // child
-        handle_redirection(args);
-        execve(path, args, envp);
-        perror("execve");
-        exit(1);
-    } else {
-        if (!background) 
+    if (!has_pipe) {
+        // Single command
+        char* path = find_in_path(args[0], env);
+        if (!path) { fprintf(stderr, "%s: command not found\n", args[0]); return; }
+
+        pid_t pid = fork();
+        if (pid == 0) { // child
+            handle_redirection(args);
+            char** envp = build_envp(env);
+            execve(path, args, envp);
+            perror("execve");
+            exit(1);
+        } else if (!background) {
+            int status;
             waitpid(pid, &status, 0);
+        }
+        free(path);
+    } else {
+        // Pipe handling
+        int cmd_start = 0, n_commands = 0;
+        char* commands[10][MAX_SIZE];
+        int cmd_lengths[10];
+
+        for (int i = 0; args[i]; i++) {
+            if (strcmp(args[i], "|") == 0) {
+                cmd_lengths[n_commands] = i - cmd_start;
+                for (int j = 0; j < cmd_lengths[n_commands]; j++)
+                    commands[n_commands][j] = args[cmd_start + j];
+                commands[n_commands][cmd_lengths[n_commands]] = NULL;
+                n_commands++;
+                cmd_start = i + 1;
+            }
+        }
+        // identify last command
+        int i;
+        for (i = cmd_start; args[i]; i++);
+        cmd_lengths[n_commands] = i - cmd_start;
+        for (int j = 0; j < cmd_lengths[n_commands]; j++)
+            commands[n_commands][j] = args[cmd_start + j];
+        commands[n_commands][cmd_lengths[n_commands]] = NULL;
+        n_commands++;
+
+        int pipefds[2 * (n_commands - 1)];
+        for (i = 0; i < n_commands - 1; i++)
+            if (pipe(pipefds + i*2) < 0) { perror("pipe"); exit(1); }
+
+        for (i = 0; i < n_commands; i++) {
+            pid_t pid = fork();
+            if (pid == 0) { // child
+                if (i != 0)
+                    dup2(pipefds[(i-1)*2], STDIN_FILENO);
+                if (i != n_commands - 1)
+                    dup2(pipefds[i*2+1], STDOUT_FILENO);
+
+                for (int j = 0; j < 2*(n_commands-1); j++) close(pipefds[j]);
+
+                handle_redirection(commands[i]);
+                char* path = find_in_path(commands[i][0], env);
+                if (!path) { fprintf(stderr, "%s: command not found\n", commands[i][0]); exit(1); }
+                char** envp = build_envp(env);
+                execve(path, commands[i], envp);
+                perror("execve");
+                exit(1);
+            }
+        }
+
+        for (i = 0; i < 2*(n_commands-1); i++) close(pipefds[i]);
+        for (i = 0; i < n_commands; i++) wait(NULL);
     }
-    free(path);
-    for (int i = 0; envp[i] != NULL; ++i) {
-        free(envp[i]);
-    }
-    free(envp);
 }
 
 void init_shell_env(array_t* arr) {
